@@ -36,7 +36,7 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $product = Product::create($request->only('name', 'price'));
+        $product = Product::create($request->only('name', 'price', 'image'));
 
         return response()->json([
             'message' => 'Produk berhasil ditambahkan!',

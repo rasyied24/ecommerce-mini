@@ -1,72 +1,66 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useDispatch } from 'react-redux';
-import { addToCart } from '../store/ProductsSlice';
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-}
+// File: src/pages/ProductList.tsx
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchProducts, addToCart, updateQuantity } from '../store/ProductsSlice';
+import { RootState } from '../store/Index';
+import toast from 'react-hot-toast';
 
 const ProductList = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [quantities, setQuantities] = useState<{ [key: number]: number }>({});
   const dispatch = useDispatch();
+  const { products, loading } = useSelector((state: RootState) => state.products);
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/products')
-      .then(res => setProducts(res.data));
-  }, []);
+    dispatch(fetchProducts() as any);
+  }, [dispatch]);
 
-  const handleAddToCart = (product: Product) => {
-    const quantity = quantities[product.id];
-    if (!quantity || quantity <= 0) return;
-    dispatch(addToCart({ ...product, quantity }));
-    setQuantities(prev => ({ ...prev, [product.id]: 0 })); // reset after add
+  const handleAddToCart = (product: any) => {
+    dispatch(addToCart(product));
+    toast.success(`${product.name} ditambahkan ke keranjang!`);
   };
 
-  const handleQuantityChange = (productId: number, value: number) => {
-    setQuantities(prev => ({ ...prev, [productId]: value }));
-  };
-
-  const calculateTotal = () => {
-    return products.reduce((total, p) => {
-      const qty = quantities[p.id] || 0;
-      return total + (p.price * qty);
-    }, 0);
+  const handleQuantityChange = (productId: number, quantity: number) => {
+    dispatch(updateQuantity({ id: productId, quantity }));
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-6">🛒 Daftar Produk</h2>
-      <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-6">
-        {products.map(p => (
-          <div key={p.id} className="border rounded-lg shadow-lg p-4 bg-white">
-            <h3 className="text-lg font-semibold">{p.name}</h3>
-            <p className="text-gray-600 mb-2">Rp {p.price.toLocaleString()}</p>
-            <div className="flex items-center gap-2 mb-2">
-              <label className="text-sm text-gray-700">Jumlah:</label>
-              <input
-                type="number"
-                min={0}
-                value={quantities[p.id] || ''}
-                onChange={(e) => handleQuantityChange(p.id, parseInt(e.target.value) || 0)}
-                className="w-16 border px-2 py-1 rounded text-sm"
-              />
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+      {loading ? (
+        <div className="col-span-full text-center text-gray-500 text-lg">Loading...</div>
+      ) : (
+        products.map((product) => (
+          <div
+            key={product.id}
+            className="bg-white rounded-lg shadow-md hover:shadow-lg transition duration-300 p-3"
+          >
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-40 object-cover rounded-md"
+            />
+            <div className="mt-2">
+              <h2 className="text-sm font-medium text-gray-800 truncate">{product.name}</h2>
+              <p className="text-black-600 font-semibold text-sm mt-1">
+                Rp {Number(product.price).toLocaleString('id-ID')}
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <input
+                  type="number"
+                  min="1"
+                  className="w-14 text-center border rounded px-2 py-1 text-sm"
+                  value={product.quantity || 1}
+                  onChange={(e) => handleQuantityChange(product.id, Number(e.target.value))}
+                />
+                <button
+                  onClick={() => handleAddToCart(product)}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded"
+                >
+                  + Keranjang
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => handleAddToCart(p)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full"
-            >
-              Tambah ke Keranjang
-            </button>
           </div>
-        ))}
-      </div>
-      <div className="mt-8 text-right font-semibold text-lg">
-        Total sementara: Rp {calculateTotal().toLocaleString()}
-      </div>
+        ))
+      )}
     </div>
   );
 };
